@@ -1,0 +1,31 @@
+# Lightweight Requirements for Render Deployment
+# This file excludes heavy ML dependencies (torch, transformers)
+# because we're using Hugging Face Inference API
+
+# Web Framework
+Flask==3.0.0
+flask-cors==4.0.0
+Flask-SQLAlchemy==3.1.1
+gunicorn==21.2.0
+
+# Image Processing (lightweight version)
+Pillow==10.1.0
+
+# HTTP Client for Hugging Face API
+requests==2.31.0
+
+# Utilities
+python-dotenv==1.0.0
+Werkzeug==3.0.1
+
+# Database
+# SQLAlchemy is included in Flask-SQLAlchemy
+
+# NO HEAVY DEPENDENCIES!
+# We're using Hugging Face Inference API, so we DON'T need:
+# - transformers (~2GB)
+# - torch (~1GB)
+# - torchvision (~500MB)
+# - opencv-python (~100MB)
+#
+# This keeps our deployment under 512MB RAM limit on Render free tier!

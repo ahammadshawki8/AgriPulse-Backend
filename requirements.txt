@@ -1,0 +1,19 @@
+# Flask Web Framework
+Flask>=3.0.0
+flask-cors>=4.0.0
+
+# Database
+Flask-SQLAlchemy>=3.1.1
+
+# AI/ML (use existing .venv installation)
+# transformers
+# torch
+# torchvision
+
+# Image Processing (use existing .venv installation)
+# opencv-python
+# Pillow
+# numpy
+
+# Utilities
+python-dotenv>=1.0.0
