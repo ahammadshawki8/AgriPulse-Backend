@@ -10,8 +10,8 @@ gunicorn==21.2.0
 # Database
 psycopg2-binary==2.9.9
 
-# Image Processing (lightweight)
-Pillow==10.1.0
+# Image Processing (updated for Python 3.14 compatibility)
+Pillow>=10.2.0
 
 # API Client for HuggingFace Space
 gradio_client==2.2.0
