@@ -14,8 +14,19 @@ UPLOAD_FOLDER.mkdir(exist_ok=True)
 RESULT_FOLDER.mkdir(exist_ok=True)
 
 # Database
-DATABASE_PATH = BASE_DIR / 'cattle_health.db'
-SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+# Use PostgreSQL on Render, SQLite locally
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Render provides DATABASE_URL
+    # Fix for SQLAlchemy 1.4+ (postgres:// -> postgresql://)
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+else:
+    # Local development - use SQLite
+    DATABASE_PATH = BASE_DIR / 'cattle_health.db'
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # File upload settings
@@ -46,4 +57,4 @@ NORMAL_TEMP_RANGES = {
 CORS_ORIGINS = ['*']  # Allow all origins for development
 
 # Debug mode
-DEBUG = True
+DEBUG = os.environ.get('FLASK_ENV') != 'production'

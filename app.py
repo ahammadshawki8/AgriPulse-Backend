@@ -71,7 +71,7 @@ def analyze_image():
     """
     import uuid
     from datetime import datetime
-    from services.detection_service import detect_body_parts
+    from services.detection_service_hf_space import detect_body_parts
     from database import db, Scan, Detection, get_or_create_animal
     
     # Check if image file is present
@@ -125,8 +125,8 @@ def analyze_image():
             print(f"[Detection] Using Hugging Face Inference API")
             from services.detection_service_hf_api import detect_body_parts
         else:
-            print(f"[Detection] Using local Grounding DINO model")
-            from services.detection_service import detect_body_parts
+            print(f"[Detection] Using HuggingFace Space")
+            from services.detection_service_hf_space import detect_body_parts
         
         detections, body_parts = detect_body_parts(str(file_path))
         
