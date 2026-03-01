@@ -1,221 +1,224 @@
-# FLIR Cattle Health Monitoring - Backend
+# Cattle Health Monitoring - Backend API
 
-**Python Flask REST API for cattle health diagnosis**
+Flask backend for cattle health monitoring system using FLIR thermal cameras.
+
+## Features
+
+- 🐄 Cattle body part detection via HuggingFace Space (Grounding DINO)
+- 🌡️ Temperature analysis and health diagnosis
+- 📊 PostgreSQL database for scan history
+- 🔄 RESTful API for Android app integration
+- 🚀 Lightweight deployment (no heavy ML dependencies)
 
 ---
 
-## 🚀 Quick Start
+## Architecture
 
-### 1. Start Server
-```bash
-.venv\Scripts\python backend\app.py
 ```
-
-Server will run on: http://localhost:5000
-
-### 2. Test API
-```bash
-.venv\Scripts\python backend\test_api.py
-```
-
-### 3. Check Health
-```bash
-curl http://localhost:5000/health
+Android App → Backend API → HuggingFace Space (AI Detection)
+                ↓
+          PostgreSQL Database
 ```
 
 ---
 
-## 📁 Project Structure
+## Local Development
 
+### Prerequisites
+
+- Python 3.11+
+- pip
+
+### Setup
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+cp .env.example .env
+# Edit .env with your HuggingFace Space username
+
+# Run server
+python app.py
 ```
-backend/
-├── app.py                 # Main Flask application
-├── config.py              # Configuration settings
-├── schemas.py             # Response data models
-├── flir_parser.py         # FLIR thermal data parser
-├── requirements.txt       # Python dependencies
-│
-├── API.md                 # API documentation
-├── README.md              # This file
-├── DAY1_COMPLETE.md       # Day 1 completion report
-│
-├── test_api.py            # Comprehensive test suite
-├── test_upload.py         # Simple upload test
-│
-├── uploads/               # Uploaded images
-├── results/               # Analysis results
-└── cattle_health.db       # SQLite database (Day 3)
+
+Server runs on `http://localhost:5000`
+
+### Test
+
+```bash
+# Test HuggingFace Space connection
+python test_space_client.py
+
+# Test complete workflow
+python test_local_complete.py
 ```
 
 ---
 
-## 📡 API Endpoints
+## Production Deployment (Render)
+
+### Prerequisites
+
+- Render account
+- HuggingFace Space deployed
+- PostgreSQL database on Render
+
+### Deploy
+
+1. Create PostgreSQL database on Render
+2. Create Web Service on Render
+3. Set environment variables:
+   ```
+   HF_SPACE_USERNAME=your_username
+   HF_SPACE_NAME=cattle-detection-api
+   FLASK_ENV=production
+   DATABASE_URL=<your_postgres_url>
+   ```
+4. Deploy!
+
+See `../RENDER_DEPLOYMENT.md` for detailed instructions.
+
+---
+
+## API Endpoints
 
 ### Health Check
-```http
+```
 GET /health
 ```
 
-### Upload & Analyze Image
-```http
+### Analyze Image
+```
 POST /api/analyze
 Content-Type: multipart/form-data
 
 Parameters:
-- image: File (required)
-- animal_id: String (optional)
-- thermal_data: JSON (optional)
+- image: Image file
+- animal_id: Animal ID (optional)
+
+Returns: Scan ID, detections, body parts
 ```
 
-**See `API.md` for complete documentation**
+### Diagnose
+```
+POST /api/diagnose
+Content-Type: application/json
+
+Body:
+{
+  "scan_id": "uuid",
+  "temperatures": {
+    "head": {"mean": 38.5, "max": 39.0, "min": 38.0, "std": 0.3},
+    ...
+  }
+}
+
+Returns: Health status, alerts, recommendations
+```
+
+See `API.md` for complete API documentation.
 
 ---
 
-## 🧪 Testing
+## Database Schema
 
-### Run All Tests
-```bash
-.venv\Scripts\python backend\test_api.py
-```
+- **animals**: Animal information
+- **scans**: Scan records
+- **detections**: Body part detections
+- **temperatures**: Temperature readings
+- **diagnoses**: Health diagnoses
 
-### Test Single Upload
-```bash
-.venv\Scripts\python backend\test_upload.py
-```
-
-### Manual Test with Python
-```python
-import requests
-
-files = {'image': open('../input/cow1.jpg', 'rb')}
-data = {'animal_id': 'COW001'}
-
-response = requests.post(
-    'http://localhost:5000/api/analyze',
-    files=files,
-    data=data
-)
-
-print(response.json())
-```
+Tables are created automatically on first run.
 
 ---
 
-## ⚙️ Configuration
+## Environment Variables
 
-Edit `config.py` to change:
-- Upload folder location
-- Result folder location
-- Database path
-- Max file size
-- Allowed file extensions
-- CORS settings
-- Grounding DINO model
-- Temperature ranges
+### Required
 
----
+- `HF_SPACE_USERNAME`: Your HuggingFace username
+- `HF_SPACE_NAME`: Your Space name (default: cattle-detection-api)
 
-## 📦 Dependencies
+### Optional
 
-### Installed
-- Flask 3.1.3
-- flask-cors 6.0.2
-- Flask-SQLAlchemy 3.1.1
-- python-dotenv 1.2.1
-
-### Using from .venv
-- transformers (Grounding DINO)
-- torch (PyTorch)
-- opencv-python (Image processing)
-- Pillow (Image handling)
-- numpy (Array operations)
+- `DATABASE_URL`: PostgreSQL connection string (auto-detected on Render)
+- `FLASK_ENV`: Environment (development/production)
 
 ---
 
-## 🔄 Development Status
+## File Structure
 
-### ✅ Day 1 - Complete
-- Flask server setup
-- Image upload endpoint
-- CORS configuration
-- API documentation
-- Test suite
-
-### 🔄 Day 2 - In Progress
-- Grounding DINO integration
-- Body part detection
-- Annotated image generation
-
-### ⏳ Day 3 - Planned
-- Database setup
-- Temperature analysis
-- Health diagnosis engine
-
-### ⏳ Day 4 - Planned
-- Frontend-backend connection
-- History endpoints
-- Animal management
-
-### ⏳ Day 5 - Planned
-- End-to-end testing
-- Deployment
-- Documentation
-
----
-
-## 🐛 Troubleshooting
-
-### Server won't start
-```bash
-# Check if port 5000 is in use
-netstat -ano | findstr :5000
-
-# Use different port in config.py
 ```
-
-### Import errors
-```bash
-# Make sure you're using the correct venv
-.venv\Scripts\activate
-
-# Install missing packages
-pip install -r requirements.txt
-```
-
-### CORS errors
-```bash
-# Check CORS_ORIGINS in config.py
-# Make sure flask-cors is installed
+backend/
+├── app.py                  # Main Flask application
+├── config.py               # Configuration
+├── database.py             # Database models
+├── schemas.py              # Response schemas
+├── flir_parser.py          # FLIR data parser
+├── services/
+│   ├── detection_service_hf_space.py  # HF Space client
+│   ├── diagnosis_service.py           # Health diagnosis
+│   └── visualization_service.py       # Image annotation
+├── requirements.txt        # Local dependencies
+├── requirements-render.txt # Production dependencies
+├── test_space_client.py    # Test HF Space
+└── test_local_complete.py  # Test complete workflow
 ```
 
 ---
 
-## 📚 Documentation
+## Dependencies
 
-- **API.md** - Complete API documentation
-- **DAY1_COMPLETE.md** - Day 1 completion report
-- **../PROJECT_TIMELINE.md** - Full project timeline
+### Local (requirements.txt)
+- Full ML stack (torch, transformers) for local testing
+- ~3GB total
 
----
-
-## 🎯 Next Steps
-
-1. **Day 2:** Integrate Grounding DINO for body part detection
-2. **Day 3:** Add database and diagnosis engine
-3. **Day 4:** Connect with Android frontend
-4. **Day 5:** Test and deploy
+### Production (requirements-render.txt)
+- Lightweight (no ML dependencies)
+- Uses HuggingFace Space for AI
+- ~50MB total
 
 ---
 
-## 📞 Support
+## Performance
 
-For issues or questions:
-1. Check API.md for endpoint documentation
-2. Run test_api.py to verify setup
-3. Check server logs for errors
+| Scenario | Time |
+|----------|------|
+| First request (cold start) | 60-90s |
+| Subsequent requests | 5-10s |
+| With GPU Space | 2-5s |
 
 ---
 
-**Status:** Day 1 Complete ✅  
-**Last Updated:** March 1, 2026
+## Troubleshooting
 
+### Space Connection Error
+- Check HF_SPACE_USERNAME is correct
+- Verify Space is running
+- Install gradio_client: `pip install gradio_client`
+
+### Database Error
+- Check DATABASE_URL is set
+- Verify PostgreSQL is running
+- Check psycopg2-binary is installed
+
+### Import Error
+- Install dependencies: `pip install -r requirements.txt`
+- Check Python version: 3.11+
+
+---
+
+## License
+
+Apache 2.0
+
+---
+
+## Support
+
+For issues or questions, check:
+- `API.md` - API documentation
+- `../RENDER_DEPLOYMENT.md` - Deployment guide
+- `../DATABASE_INFO.md` - Database information
