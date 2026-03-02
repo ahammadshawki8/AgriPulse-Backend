@@ -170,19 +170,9 @@ def analyze_image():
         
         # NEW: Perform health diagnosis
         print(f"\n[4/4] Performing health diagnosis...")
-        from services.diagnosis_service_v2 import diagnose_health_v2
         
-        # Simulate environmental data
-        ambient_temp = 22.0  # °C
-        humidity = 65.0      # %
-        
-        diagnosis_result = diagnose_health_v2(
-            animal_id=animal_id,
-            temperatures=thermal_data,
-            ambient_temp=ambient_temp,
-            relative_humidity=humidity,
-            use_baseline=True
-        )
+        # Simple diagnosis based on temperature thresholds
+        diagnosis_result = perform_simple_diagnosis(thermal_data, ambient_temp, humidity)
         print(f"✓ Diagnosis complete - Status: {diagnosis_result['status']}")
         
         # Generate annotated image (optional - skip if cv2 not available)
@@ -497,6 +487,42 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
+
+
+def perform_simple_diagnosis(thermal_data, ambient_temp, humidity):
+    """
+    Simple diagnosis based on temperature thresholds
+    """
+    alerts = []
+    recommendations = []
+    status = "healthy"
+    
+    for part_name, temps in thermal_data.items():
+        temp_max = temps['temp_max']
+        temp_mean = temps['temp_mean']
+        
+        # Check for elevated temperatures
+        if 'udder' in part_name.lower() and temp_max > 40.0:
+            alerts.append(f"Elevated udder temperature ({temp_max:.1f}°C) - possible mastitis")
+            recommendations.append("Monitor for mastitis symptoms and consider veterinary consultation")
+            status = "attention_needed"
+        elif 'leg' in part_name.lower() and temp_max > 40.5:
+            alerts.append(f"Elevated leg temperature ({temp_max:.1f}°C) - possible lameness")
+            recommendations.append("Check for limping or hoof problems")
+            status = "attention_needed"
+        elif any(head_part in part_name.lower() for head_part in ['head', 'eye', 'ear']) and temp_max > 39.5:
+            alerts.append(f"Elevated head temperature ({temp_max:.1f}°C) - possible fever")
+            recommendations.append("Monitor for signs of respiratory disease or fever")
+            status = "attention_needed"
+    
+    if not alerts:
+        recommendations.append("All temperatures within normal range - continue regular monitoring")
+    
+    return {
+        'status': status,
+        'alerts': alerts,
+        'recommendations': recommendations
+    }
 
 
 if __name__ == '__main__':

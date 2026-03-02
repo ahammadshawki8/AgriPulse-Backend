@@ -153,6 +153,148 @@ def init_db(app):
             
             db.session.commit()
             print(f"✓ Created {len(test_animals)} test animals")
+            
+            # Add dummy scan history
+            create_dummy_scan_history()
+
+
+def create_dummy_scan_history():
+    """Create dummy scan history for testing"""
+    import uuid
+    from datetime import datetime, timedelta
+    
+    # Create dummy scans for COW001 and COW002
+    dummy_scans = [
+        # COW001 - Recent healthy scans
+        {
+            'animal_id': 'COW001',
+            'days_ago': 1,
+            'scenario': 'healthy',
+            'body_parts': ['head', 'body', 'udder', 'leg_1', 'leg_2']
+        },
+        {
+            'animal_id': 'COW001', 
+            'days_ago': 2,
+            'scenario': 'healthy',
+            'body_parts': ['head', 'body', 'udder', 'leg_1']
+        },
+        {
+            'animal_id': 'COW001',
+            'days_ago': 3, 
+            'scenario': 'mastitis_mild',
+            'body_parts': ['head', 'body', 'udder', 'leg_1', 'leg_2']
+        },
+        
+        # COW002 - Some health issues
+        {
+            'animal_id': 'COW002',
+            'days_ago': 1,
+            'scenario': 'lameness_right',
+            'body_parts': ['head', 'body', 'leg_1', 'leg_2', 'leg_3']
+        },
+        {
+            'animal_id': 'COW002',
+            'days_ago': 4,
+            'scenario': 'healthy', 
+            'body_parts': ['head', 'body', 'udder', 'leg_1']
+        },
+        
+        # COW003 - Healthy
+        {
+            'animal_id': 'COW003',
+            'days_ago': 2,
+            'scenario': 'healthy',
+            'body_parts': ['head', 'body', 'udder']
+        }
+    ]
+    
+    for scan_data in dummy_scans:
+        scan_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow() - timedelta(days=scan_data['days_ago'])
+        
+        # Create scan
+        scan = Scan(
+            id=scan_id,
+            animal_id=scan_data['animal_id'],
+            timestamp=timestamp,
+            image_path=f"/dummy/scan_{scan_id}.jpg",
+            annotated_image_path=None
+        )
+        db.session.add(scan)
+        
+        # Generate thermal data based on scenario
+        thermal_data = generate_dummy_thermal_data(scan_data['scenario'], scan_data['body_parts'])
+        
+        # Create temperature records
+        for part_name, temps in thermal_data.items():
+            temperature = Temperature(
+                scan_id=scan_id,
+                body_part=part_name,
+                temp_mean=temps['temp_mean'],
+                temp_max=temps['temp_max'],
+                temp_min=temps['temp_min'],
+                temp_std=temps['temp_std']
+            )
+            db.session.add(temperature)
+        
+        # Create diagnosis
+        diagnosis_result = perform_simple_diagnosis(thermal_data, 22.0, 65.0)
+        diagnosis = Diagnosis(
+            scan_id=scan_id,
+            status=diagnosis_result['status'],
+            alerts=json.dumps(diagnosis_result['alerts']),
+            recommendations=json.dumps(diagnosis_result['recommendations'])
+        )
+        db.session.add(diagnosis)
+    
+    db.session.commit()
+    print(f"✓ Created {len(dummy_scans)} dummy scans with thermal data and diagnosis")
+
+
+def generate_dummy_thermal_data(scenario, body_parts):
+    """Generate dummy thermal data for testing"""
+    import random
+    
+    # Base temperatures for different scenarios
+    scenario_temps = {
+        'healthy': {'base': 37.5, 'variation': 1.0},
+        'mastitis_mild': {'base': 38.0, 'variation': 1.5, 'udder_boost': 2.2},
+        'mastitis_moderate': {'base': 38.2, 'variation': 1.8, 'udder_boost': 3.0},
+        'lameness_right': {'base': 37.8, 'variation': 1.2, 'leg_boost': 3.5},
+        'fever_mild': {'base': 38.5, 'variation': 1.0, 'head_boost': 1.3}
+    }
+    
+    config = scenario_temps.get(scenario, scenario_temps['healthy'])
+    base_temp = config['base']
+    variation = config['variation']
+    
+    thermal_data = {}
+    
+    for part_name in body_parts:
+        part_base_temp = base_temp
+        
+        # Apply scenario-specific boosts
+        if 'udder' in part_name.lower() and 'udder_boost' in config:
+            part_base_temp += config['udder_boost']
+        elif 'leg' in part_name.lower() and 'leg_boost' in config:
+            part_base_temp += config['leg_boost']
+        elif any(head_part in part_name.lower() for head_part in ['head', 'eye', 'ear']) and 'head_boost' in config:
+            part_base_temp += config['head_boost']
+        
+        # Generate realistic temperature stats
+        temp_mean = part_base_temp + random.uniform(-0.3, 0.3)
+        temp_std = variation * random.uniform(0.5, 1.5)
+        temp_min = max(25.0, temp_mean - temp_std * 1.5)
+        temp_max = min(45.0, temp_mean + temp_std * 2.0)
+        
+        thermal_data[part_name] = {
+            'temp_mean': round(temp_mean, 2),
+            'temp_max': round(temp_max, 2),
+            'temp_min': round(temp_min, 2),
+            'temp_std': round(temp_std, 2)
+        }
+    
+    return thermal_data
 
 
 def get_or_create_animal(animal_id, tag_id=None):
