@@ -30,6 +30,7 @@ class Animal(db.Model):
             'name': self.name,
             'breed': self.breed,
             'age': self.age,
+            'scan_count': len(self.scans) if self.scans else 0,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
