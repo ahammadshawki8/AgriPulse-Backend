@@ -112,7 +112,7 @@ def diagnose_health(temperatures: Dict[str, Dict[str, float]]) -> Dict:
     
     return {
         'status': status,
-        'alerts': [alert.to_dict() for alert in alerts],
+        'alerts': [f"{alert.part}: {alert.issue} ({alert.value:.1f}°C)" for alert in alerts],
         'recommendations': recommendations
     }
 

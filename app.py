@@ -176,7 +176,8 @@ def analyze_image():
         humidity = 65.0      # %
         
         # Simple diagnosis based on temperature thresholds
-        diagnosis_result = perform_simple_diagnosis(thermal_data, ambient_temp, humidity)
+        from services.diagnosis_service import diagnose_health
+        diagnosis_result = diagnose_health(thermal_data)
         print(f"✓ Diagnosis complete - Status: {diagnosis_result['status']}")
         
         # Generate annotated image (optional - skip if cv2 not available)
@@ -497,36 +498,8 @@ def perform_simple_diagnosis(thermal_data, ambient_temp, humidity):
     """
     Simple diagnosis based on temperature thresholds
     """
-    alerts = []
-    recommendations = []
-    status = "healthy"
-    
-    for part_name, temps in thermal_data.items():
-        temp_max = temps['temp_max']
-        temp_mean = temps['temp_mean']
-        
-        # Check for elevated temperatures
-        if 'udder' in part_name.lower() and temp_max > 40.0:
-            alerts.append(f"Elevated udder temperature ({temp_max:.1f}°C) - possible mastitis")
-            recommendations.append("Monitor for mastitis symptoms and consider veterinary consultation")
-            status = "attention_needed"
-        elif 'leg' in part_name.lower() and temp_max > 40.5:
-            alerts.append(f"Elevated leg temperature ({temp_max:.1f}°C) - possible lameness")
-            recommendations.append("Check for limping or hoof problems")
-            status = "attention_needed"
-        elif any(head_part in part_name.lower() for head_part in ['head', 'eye', 'ear']) and temp_max > 39.5:
-            alerts.append(f"Elevated head temperature ({temp_max:.1f}°C) - possible fever")
-            recommendations.append("Monitor for signs of respiratory disease or fever")
-            status = "attention_needed"
-    
-    if not alerts:
-        recommendations.append("All temperatures within normal range - continue regular monitoring")
-    
-    return {
-        'status': status,
-        'alerts': alerts,
-        'recommendations': recommendations
-    }
+    from services.diagnosis_service import diagnose_health
+    return diagnose_health(thermal_data)
 
 
 if __name__ == '__main__':
