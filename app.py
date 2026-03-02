@@ -161,11 +161,19 @@ def analyze_image():
         for part_name, bbox in body_parts.items():
             print(f"  {part_name}: {bbox}")
         
-        # Generate annotated image
+        # Generate annotated image (optional - skip if cv2 not available)
         print(f"\n[3/4] Generating annotated image...")
-        from services.visualization_service import draw_detections
-        annotated_path = draw_detections(str(file_path), detections, body_parts)
-        print(f"✓ Annotated image saved: {annotated_path}")
+        annotated_path = None
+        try:
+            from services.visualization_service import draw_detections
+            annotated_path = draw_detections(str(file_path), detections, body_parts)
+            print(f"✓ Annotated image saved: {annotated_path}")
+        except ImportError as e:
+            print(f"⚠ Skipping visualization (cv2 not available): {e}")
+            annotated_path = None
+        except Exception as e:
+            print(f"⚠ Visualization failed: {e}")
+            annotated_path = None
         
         # Save to database
         print(f"\n[4/4] Saving to database...")
@@ -176,7 +184,7 @@ def analyze_image():
             animal_id=animal_id,
             timestamp=timestamp,
             image_path=str(file_path),
-            annotated_image_path=str(annotated_path)
+            annotated_image_path=str(annotated_path) if annotated_path else None
         )
         db.session.add(scan)
         
