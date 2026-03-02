@@ -171,6 +171,10 @@ def analyze_image():
         # NEW: Perform health diagnosis
         print(f"\n[4/4] Performing health diagnosis...")
         
+        # Simulate environmental data
+        ambient_temp = 22.0  # °C
+        humidity = 65.0      # %
+        
         # Simple diagnosis based on temperature thresholds
         diagnosis_result = perform_simple_diagnosis(thermal_data, ambient_temp, humidity)
         print(f"✓ Diagnosis complete - Status: {diagnosis_result['status']}")
