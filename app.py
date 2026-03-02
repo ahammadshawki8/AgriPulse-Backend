@@ -170,17 +170,17 @@ def analyze_image():
         
         # NEW: Perform health diagnosis
         print(f"\n[4/4] Performing health diagnosis...")
-        from services.diagnosis_service_v2 import diagnose_cattle_health
+        from services.diagnosis_service_v2 import diagnose_health_v2
         
         # Simulate environmental data
         ambient_temp = 22.0  # °C
         humidity = 65.0      # %
         
-        diagnosis_result = diagnose_cattle_health(
+        diagnosis_result = diagnose_health_v2(
+            animal_id=animal_id,
             temperatures=thermal_data,
             ambient_temp=ambient_temp,
             relative_humidity=humidity,
-            animal_id=animal_id,
             use_baseline=True
         )
         print(f"✓ Diagnosis complete - Status: {diagnosis_result['status']}")
