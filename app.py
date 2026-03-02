@@ -148,15 +148,8 @@ def analyze_image():
         
         # Run Grounding DINO detection
         print(f"\n[1/4] Running Grounding DINO detection...")
-        
-        # Use HF API if token is set, otherwise use local model
-        hf_token = os.environ.get('HUGGINGFACE_API_TOKEN')
-        if hf_token:
-            print(f"[Detection] Using Hugging Face Inference API")
-            from services.detection_service_hf_api import detect_body_parts
-        else:
-            print(f"[Detection] Using HuggingFace Space")
-            from services.detection_service_hf_space import detect_body_parts
+        print(f"[Detection] Using HuggingFace Space")
+        from services.detection_service_hf_space import detect_body_parts
         
         detections, body_parts = detect_body_parts(str(file_path))
         
