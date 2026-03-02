@@ -201,7 +201,7 @@ def analyze_image():
 @app.route('/api/diagnose', methods=['POST'])
 def diagnose():
     """
-    Diagnose cattle health based on temperature readings
+    Enhanced cattle health diagnosis based on research (2020-2025)
     
     Workflow Step 2: Frontend extracts temperatures from thermal data using coordinates
     Frontend sends temperatures to backend for diagnosis
@@ -213,15 +213,18 @@ def diagnose():
                 'head': {'temp_mean': 38.2, 'temp_max': 38.5, 'temp_min': 37.9, 'temp_std': 0.2},
                 'udder': {'temp_mean': 38.7, 'temp_max': 39.1, 'temp_min': 38.3, 'temp_std': 0.3}
             }
+        - ambient_temp: Float (optional, default 20.0°C) - for THI calculation
+        - relative_humidity: Float (optional, default 50%) - for THI calculation
+        - use_baseline: Boolean (optional, default True) - use per-animal baseline
     
     Returns:
         - scan_id: Scan identifier
-        - diagnosis: Health diagnosis with status, alerts, recommendations
+        - diagnosis: Health diagnosis with status, alerts, recommendations, confidence
         - message: Success message
     """
     import json
     from datetime import datetime
-    from services.diagnosis_service import diagnose_health
+    from services.diagnosis_service_v2 import diagnose_health_v2
     from database import db, Scan, Temperature, Diagnosis
     
     try:
@@ -232,6 +235,9 @@ def diagnose():
         
         scan_id = data.get('scan_id')
         temperatures = data.get('temperatures')
+        ambient_temp = data.get('ambient_temp', 20.0)
+        relative_humidity = data.get('relative_humidity', 50.0)
+        use_baseline = data.get('use_baseline', True)
         
         if not scan_id:
             return jsonify({'error': 'scan_id is required'}), 400
@@ -244,11 +250,18 @@ def diagnose():
         if not scan:
             return jsonify({'error': f'Scan {scan_id} not found'}), 404
         
+        # Get animal_id from scan
+        animal_id = scan.animal_id if scan.animal_id else 1  # Default to animal 1
+        
         print(f"\n{'='*70}")
-        print(f"DIAGNOSIS REQUEST")
+        print(f"ENHANCED DIAGNOSIS REQUEST (Research-backed)")
         print(f"{'='*70}")
         print(f"Scan ID: {scan_id}")
+        print(f"Animal ID: {animal_id}")
         print(f"Body parts: {', '.join(temperatures.keys())}")
+        print(f"Ambient temp: {ambient_temp}°C")
+        print(f"Humidity: {relative_humidity}%")
+        print(f"Use baseline: {use_baseline}")
         
         # Save temperature readings to database
         print(f"\n[1/3] Saving temperature readings...")
@@ -265,11 +278,20 @@ def diagnose():
         
         print(f"✓ Saved {len(temperatures)} temperature readings")
         
-        # Run diagnosis
-        print(f"\n[2/3] Running health diagnosis...")
-        diagnosis_result = diagnose_health(temperatures)
+        # Run enhanced diagnosis
+        print(f"\n[2/3] Running enhanced health diagnosis...")
+        diagnosis_result = diagnose_health_v2(
+            animal_id=animal_id,
+            temperatures=temperatures,
+            ambient_temp=ambient_temp,
+            relative_humidity=relative_humidity,
+            use_baseline=use_baseline
+        )
         
         print(f"✓ Status: {diagnosis_result['status']}")
+        print(f"✓ Confidence: {diagnosis_result['confidence']*100:.1f}%")
+        print(f"✓ THI: {diagnosis_result['thi']:.1f} {'(Heat Stress)' if diagnosis_result['heat_stress'] else ''}")
+        print(f"✓ Baseline used: {diagnosis_result['baseline_used']}")
         print(f"✓ Alerts: {len(diagnosis_result['alerts'])}")
         print(f"✓ Recommendations: {len(diagnosis_result['recommendations'])}")
         
@@ -291,7 +313,7 @@ def diagnose():
             'success': True,
             'scan_id': scan_id,
             'diagnosis': diagnosis_result,
-            'message': 'Diagnosis completed successfully'
+            'message': 'Enhanced diagnosis completed successfully'
         }), 200
         
     except Exception as e:
