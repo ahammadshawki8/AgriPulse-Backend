@@ -12,6 +12,7 @@ psycopg2-binary==2.9.10
 
 # Image Processing
 Pillow>=10.2.0
+numpy>=1.24.0
 
 # API Client for HuggingFace Space
 gradio_client==2.2.0
