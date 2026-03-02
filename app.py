@@ -81,18 +81,28 @@ def analyze_image():
     print(f"Request method: {request.method}")
     print(f"Content-Type: {request.content_type}")
     print(f"Content-Length: {request.content_length}")
-    print(f"Request files keys: {list(request.files.keys())}")
-    print(f"Request form keys: {list(request.form.keys())}")
-    print(f"Request data length: {len(request.data) if request.data else 0}")
     print(f"Request headers:")
     for key, value in request.headers:
         print(f"  {key}: {value}")
+    
+    # IMPORTANT: Check request.files FIRST before accessing request.data
+    # Accessing request.data consumes the stream and makes request.files empty!
+    print(f"Request files keys: {list(request.files.keys())}")
+    print(f"Request form keys: {list(request.form.keys())}")
     print("=" * 80)
     
     # Check if image file is present
     if 'image' not in request.files:
         print("ERROR: 'image' not in request.files")
         print(f"Available files: {list(request.files.keys())}")
+        
+        # Now we can check raw data since files parsing failed
+        print(f"Request data length: {len(request.data) if request.data else 0}")
+        if request.data:
+            raw_preview = request.data[:500].decode('utf-8', errors='replace')
+            print(f"\nRAW DATA PREVIEW (first 500 bytes):")
+            print(raw_preview)
+        
         return jsonify({'error': 'No image file provided'}), 400
     
     file = request.files['image']
