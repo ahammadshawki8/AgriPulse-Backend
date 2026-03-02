@@ -74,18 +74,38 @@ def analyze_image():
     from services.detection_service_hf_space import detect_body_parts
     from database import db, Scan, Detection, get_or_create_animal
     
+    # DEBUG: Log all request details
+    print("=" * 80)
+    print("ANALYZE REQUEST RECEIVED")
+    print("=" * 80)
+    print(f"Request method: {request.method}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"Content-Length: {request.content_length}")
+    print(f"Request files keys: {list(request.files.keys())}")
+    print(f"Request form keys: {list(request.form.keys())}")
+    print(f"Request data length: {len(request.data) if request.data else 0}")
+    print(f"Request headers:")
+    for key, value in request.headers:
+        print(f"  {key}: {value}")
+    print("=" * 80)
+    
     # Check if image file is present
     if 'image' not in request.files:
+        print("ERROR: 'image' not in request.files")
+        print(f"Available files: {list(request.files.keys())}")
         return jsonify({'error': 'No image file provided'}), 400
     
     file = request.files['image']
+    print(f"Image file found: {file.filename}")
     
     # Check if file is selected
     if file.filename == '':
+        print("ERROR: Empty filename")
         return jsonify({'error': 'No file selected'}), 400
     
     # Check if file is allowed
     if not allowed_file(file.filename):
+        print(f"ERROR: Invalid file type: {file.filename}")
         return jsonify({
             'error': f'Invalid file type. Allowed types: {", ".join(config.ALLOWED_EXTENSIONS)}'
         }), 400
