@@ -375,3 +375,79 @@ def generate_test_dataset(output_dir: str = 'test_thermal_data'):
 if __name__ == '__main__':
     # Generate test dataset
     generate_test_dataset()
+
+
+def simulate_thermal_extraction(body_parts: Dict, image_path: str) -> Dict[str, Dict[str, float]]:
+    """
+    Simulate thermal data extraction from detected body parts
+    
+    Args:
+        body_parts: Dictionary of body part names to bounding boxes [x1, y1, x2, y2]
+        image_path: Path to the image (for logging)
+    
+    Returns:
+        Dictionary of body part thermal statistics
+        Format: {
+            'body_part_name': {
+                'temp_mean': float,
+                'temp_max': float, 
+                'temp_min': float,
+                'temp_std': float
+            }
+        }
+    """
+    import random
+    
+    print(f"[Thermal] Simulating thermal extraction for {len(body_parts)} body parts")
+    
+    # Create thermal simulator
+    simulator = ThermalSimulator(640, 480)
+    
+    # Randomly choose a health scenario for realistic simulation
+    scenarios = [
+        'healthy', 'healthy', 'healthy',  # 60% healthy
+        'mastitis_mild', 'mastitis_moderate',  # 20% mastitis
+        'lameness_left', 'lameness_right',     # 20% lameness  
+        'fever_mild'                           # 10% fever
+    ]
+    
+    scenario = random.choice(scenarios)
+    thermal_array, description = simulator.generate_scenario(scenario, ambient_temp=22.0)
+    
+    print(f"[Thermal] Generated scenario: {description}")
+    
+    # Extract temperatures from each body part region
+    thermal_data = {}
+    
+    for part_name, bbox in body_parts.items():
+        x1, y1, x2, y2 = bbox
+        
+        # Ensure coordinates are within image bounds
+        x1 = max(0, min(x1, 639))
+        x2 = max(0, min(x2, 639))
+        y1 = max(0, min(y1, 479))
+        y2 = max(0, min(y2, 479))
+        
+        # Extract thermal region
+        if x2 > x1 and y2 > y1:
+            region = thermal_array[y1:y2, x1:x2]
+            
+            # Calculate statistics
+            temp_mean = float(np.mean(region))
+            temp_max = float(np.max(region))
+            temp_min = float(np.min(region))
+            temp_std = float(np.std(region))
+            
+            thermal_data[part_name] = {
+                'temp_mean': round(temp_mean, 2),
+                'temp_max': round(temp_max, 2),
+                'temp_min': round(temp_min, 2),
+                'temp_std': round(temp_std, 2)
+            }
+            
+            print(f"[Thermal] {part_name:12} → Mean: {temp_mean:.1f}°C, Max: {temp_max:.1f}°C, Range: {temp_max-temp_min:.1f}°C")
+        else:
+            print(f"[Thermal] {part_name:12} → Invalid bbox, skipping")
+    
+    print(f"[Thermal] ✓ Extracted thermal data for {len(thermal_data)} body parts")
+    return thermal_data

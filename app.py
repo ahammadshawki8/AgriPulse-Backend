@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
+import json
 from pathlib import Path
 import config
 from database import db, init_db
@@ -72,7 +73,7 @@ def analyze_image():
     import uuid
     from datetime import datetime
     from services.detection_service_hf_space import detect_body_parts
-    from database import db, Scan, Detection, get_or_create_animal
+    from database import db, Scan, Detection, Temperature, Diagnosis, get_or_create_animal
     
     # DEBUG: Log all request details
     print("=" * 80)
@@ -161,8 +162,31 @@ def analyze_image():
         for part_name, bbox in body_parts.items():
             print(f"  {part_name}: {bbox}")
         
+        # NEW: Extract thermal data from detected body parts
+        print(f"\n[3/4] Extracting thermal data from body parts...")
+        from services.thermal_simulator import simulate_thermal_extraction
+        thermal_data = simulate_thermal_extraction(body_parts, str(file_path))
+        print(f"✓ Extracted thermal data for {len(thermal_data)} body parts")
+        
+        # NEW: Perform health diagnosis
+        print(f"\n[4/4] Performing health diagnosis...")
+        from services.diagnosis_service_v2 import diagnose_cattle_health
+        
+        # Simulate environmental data
+        ambient_temp = 22.0  # °C
+        humidity = 65.0      # %
+        
+        diagnosis_result = diagnose_cattle_health(
+            temperatures=thermal_data,
+            ambient_temp=ambient_temp,
+            relative_humidity=humidity,
+            animal_id=animal_id,
+            use_baseline=True
+        )
+        print(f"✓ Diagnosis complete - Status: {diagnosis_result['status']}")
+        
         # Generate annotated image (optional - skip if cv2 not available)
-        print(f"\n[3/4] Generating annotated image...")
+        print(f"\n[5/6] Generating annotated image...")
         annotated_path = None
         try:
             from services.visualization_service import draw_detections
@@ -176,7 +200,7 @@ def analyze_image():
             annotated_path = None
         
         # Save to database
-        print(f"\n[4/4] Saving to database...")
+        print(f"\n[6/6] Saving to database...")
         
         # Create scan record
         scan = Scan(
@@ -201,8 +225,29 @@ def analyze_image():
             )
             db.session.add(detection)
         
+        # Save thermal data
+        for part_name, temp_stats in thermal_data.items():
+            temperature = Temperature(
+                scan_id=scan_id,
+                body_part=part_name,
+                temp_mean=temp_stats['temp_mean'],
+                temp_max=temp_stats['temp_max'],
+                temp_min=temp_stats['temp_min'],
+                temp_std=temp_stats['temp_std']
+            )
+            db.session.add(temperature)
+        
+        # Save diagnosis
+        diagnosis = Diagnosis(
+            scan_id=scan_id,
+            status=diagnosis_result['status'],
+            alerts=json.dumps(diagnosis_result['alerts']),
+            recommendations=json.dumps(diagnosis_result['recommendations'])
+        )
+        db.session.add(diagnosis)
+        
         db.session.commit()
-        print(f"✓ Saved scan and {len(detections)} detections to database")
+        print(f"✓ Saved scan, {len(detections)} detections, {len(thermal_data)} temperatures, and diagnosis to database")
         
         print(f"\n{'='*70}\n")
         
@@ -213,9 +258,11 @@ def analyze_image():
             'animal_id': animal_id,
             'body_parts': body_parts,
             'detections': detections,
+            'thermal_data': thermal_data,
+            'diagnosis': diagnosis_result,
             'image_path': str(file_path),
             'annotated_image_path': str(annotated_path),
-            'message': 'Body parts detected successfully. Use /api/diagnose to analyze temperatures.'
+            'message': 'Complete analysis finished - detection, thermal extraction, and diagnosis complete.'
         }), 200
         
     except Exception as e:
